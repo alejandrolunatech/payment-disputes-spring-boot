@@ -1,0 +1,10 @@
+target/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.env
+
+# Local overrides; op.env holds 1Password references only and is committed
+*.local
+application-local.yml
