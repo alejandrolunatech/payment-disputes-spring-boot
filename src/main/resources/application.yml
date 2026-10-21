@@ -1,0 +1,42 @@
+# Defaults run fully offline: the scripted stand-in replaces the model and no AI client starts.
+# The openrouter profile (application-openrouter.yml) switches to a real model.
+spring:
+  application:
+    name: payment-disputes
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/disputes}
+    username: ${DB_USER:disputes}
+    password: ${DB_PASSWORD:disputes}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+  ai:
+    model:
+      chat: none
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+
+disputes:
+  triage:
+    model: scripted
+    model-name: scripted-stand-in
+    min-confidence: 0.75
+    breaker:
+      failure-rate-percent: 50
+      window: 10
+      minimum-calls: 5
+      open-for: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
