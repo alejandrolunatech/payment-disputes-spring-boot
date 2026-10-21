@@ -38,7 +38,7 @@ public class TriageService {
     /** {@code maskedStatement} must already be masked: this method sends it out of the system. */
     public Triage triage(String maskedStatement, Transaction transaction) {
         if (!breaker.tryAcquirePermission()) {
-            log(null, Outcome.SKIPPED_CIRCUIT_OPEN, "model calls paused");
+            log(null, 0, Outcome.SKIPPED_CIRCUIT_OPEN, "model calls paused");
             return fallback(maskedStatement, "model paused after repeated failures");
         }
         long started = System.nanoTime();
@@ -48,12 +48,13 @@ public class TriageService {
                     transaction.amount().amount(), transaction.amount().currency()));
             breaker.onSuccess(System.nanoTime() - started, TimeUnit.NANOSECONDS);
         } catch (TriageModel.UnavailableException e) {
-            breaker.onError(System.nanoTime() - started, TimeUnit.NANOSECONDS, e);
-            log(null, Outcome.FAILED, e.getMessage());
+            long elapsed = System.nanoTime() - started;
+            breaker.onError(elapsed, TimeUnit.NANOSECONDS, e);
+            log(null, TimeUnit.NANOSECONDS.toMillis(elapsed), Outcome.FAILED, e.getMessage());
             return fallback(maskedStatement, "model unavailable");
         }
         Triage triage = check(proposal, transaction);
-        log(proposal.usage(), triage instanceof Triage.Decided ? Outcome.ACCEPTED : Outcome.SENT_TO_REVIEW,
+        log(proposal.usage(), 0, triage instanceof Triage.Decided ? Outcome.ACCEPTED : Outcome.SENT_TO_REVIEW,
                 triage instanceof Triage.NeedsReview review ? review.why() : proposal.reasonCode());
         return triage;
     }
@@ -64,7 +65,8 @@ public class TriageService {
                 .filter(code -> code.name().equals(proposal.reasonCode()))
                 .findFirst();
         if (reason.isEmpty()) {
-            return new Triage.NeedsReview("model proposed an unknown reason: " + proposal.reasonCode());
+            // A fixed message: the model's text may echo the customer's statement, which must not reach the logs.
+            return new Triage.NeedsReview("model proposed an unknown reason");
         }
         if (Double.isNaN(proposal.confidence()) || proposal.confidence() < 0 || proposal.confidence() > 1) {
             return new Triage.NeedsReview("model gave an invalid confidence");
@@ -85,12 +87,13 @@ public class TriageService {
                 .orElseGet(() -> new Triage.NeedsReview(why + "; no rule matched"));
     }
 
-    private void log(TriageModel.Usage usage, Outcome outcome, String detail) {
+    /** {@code elapsedMillis} is used when the model reported no usage, as on a failed call. */
+    private void log(TriageModel.Usage usage, long elapsedMillis, Outcome outcome, String detail) {
         callLog.record(new ModelCallLog.Entry(clock.instant(),
                 usage == null ? "none" : usage.model(),
                 usage == null ? 0 : usage.inputTokens(),
                 usage == null ? 0 : usage.outputTokens(),
-                usage == null ? 0 : usage.latencyMillis(),
+                usage == null ? elapsedMillis : usage.latencyMillis(),
                 outcome, detail));
     }
 }

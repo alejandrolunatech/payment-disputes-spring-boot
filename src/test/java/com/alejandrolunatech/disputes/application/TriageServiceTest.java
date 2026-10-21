@@ -3,6 +3,7 @@ package com.alejandrolunatech.disputes.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.alejandrolunatech.disputes.application.port.ModelCallLog.Outcome;
+import com.alejandrolunatech.disputes.application.port.TriageModel;
 import com.alejandrolunatech.disputes.application.port.TriageModel.Proposal;
 import com.alejandrolunatech.disputes.application.port.TriageModel.Usage;
 import com.alejandrolunatech.disputes.domain.Money;
@@ -50,10 +51,11 @@ class TriageServiceTest {
     }
 
     @Test
-    void sendsAnInventedReasonToAPerson() {
-        model.answers("CUSTOMER_IS_ANGRY", 0.99);
+    void sendsAnInventedReasonToAPersonWithoutLoggingIt() {
+        model.answers("ana@example.com says it is FRAUD", 0.99);
 
-        assertThat(triage.triage("hmm", TX)).isInstanceOf(Triage.NeedsReview.class);
+        assertThat(triage.triage("hmm", TX)).isEqualTo(new Triage.NeedsReview("model proposed an unknown reason"));
+        assertThat(log.entries.getLast().detail()).doesNotContain("ana@example.com");
     }
 
     @Test
@@ -79,6 +81,23 @@ class TriageServiceTest {
         assertThat(triage.triage("I was charged twice", TX))
                 .isEqualTo(new Triage.Decided(ReasonCode.DUPLICATE_CHARGE, 1.0, Triage.Source.RULES));
         assertThat(log.last()).isEqualTo(Outcome.FAILED);
+    }
+
+    @Test
+    void aFailedCallIsLoggedWithTheTimeItTook() {
+        TriageModel slowThenDown = request -> {
+            try {
+                Thread.sleep(30);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            throw new TriageModel.UnavailableException("timeout", null);
+        };
+        var slow = new TriageService(slowThenDown, log, CircuitBreaker.ofDefaults("slow"), 0.75, Clock.systemUTC());
+
+        slow.triage("charged twice", TX);
+
+        assertThat(log.entries.getLast().latencyMillis()).isGreaterThanOrEqualTo(30);
     }
 
     @Test

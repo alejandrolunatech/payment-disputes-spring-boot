@@ -1,5 +1,5 @@
 # A real model through OpenRouter's OpenAI-compatible API. The key comes only from the
-# environment, for example: op run --env-file=op.env -- ./mvnw spring-boot:run -Dspring-boot.run.profiles=openrouter
+# environment, for example: op run --env-file=op.env -- ./mvnw spring-boot:test-run -Dspring-boot.run.profiles=openrouter
 spring:
   ai:
     model:
@@ -7,11 +7,12 @@ spring:
     openai:
       base-url: https://openrouter.ai/api/v1
       api-key: ${OPENROUTER_API_KEY}
+      # Connection limits belong to the shared client, not the chat options.
+      timeout: 15s
+      max-retries: 1
       chat:
         model: ${TRIAGE_MODEL:anthropic/claude-haiku-5.5}
         temperature: 0.0
-        timeout: 15s
-        max-retries: 1
 
 disputes:
   triage:

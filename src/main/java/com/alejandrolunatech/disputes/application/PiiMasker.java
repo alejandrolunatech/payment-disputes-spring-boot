@@ -11,7 +11,7 @@ public final class PiiMasker {
     private static final Pattern EMAIL = Pattern.compile("[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+");
     private static final Pattern IBAN = Pattern.compile("\\b[A-Z]{2}\\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\\b");
     private static final Pattern CARD = Pattern.compile("\\b\\d(?:[ -]?\\d){12,18}\\b");
-    private static final Pattern PHONE = Pattern.compile("(?<!\\w)\\+\\d{1,3}[ -]?\\d(?:[ -]?\\d){7,11}\\b|\\b0\\d(?:[ -]?\\d){8}\\b");
+    private static final Pattern PHONE = Pattern.compile("(?<!\\w)\\+\\d{1,3}[ -]?(?:\\(0\\)[ -]?)?\\d(?:[ -]?\\d){7,11}\\b|\\b0\\d(?:[ -]?\\d){8}\\b");
 
     private PiiMasker() {
     }

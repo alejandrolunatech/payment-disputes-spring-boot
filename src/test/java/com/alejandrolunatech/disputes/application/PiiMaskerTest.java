@@ -16,6 +16,8 @@ class PiiMaskerTest {
             card 4111-1111-1111-1111 was used             | card [CARD] was used
             call +31 6 12345678 after five               | call [PHONE] after five
             call 0612345678 after five                   | call [PHONE] after five
+            call +31 (0)6 1234 5678 after five           | call [PHONE] after five
+            call +31(0)612345678 after five              | call [PHONE] after five
             order 12345 for 49.99 EUR on 12-10-2026       | order 12345 for 49.99 EUR on 12-10-2026
             """)
     void masksPersonalDataAndLeavesTheRest(String input, String expected) {
